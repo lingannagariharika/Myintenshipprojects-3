@@ -1,0 +1,256 @@
+import java.io.*;
+import java.util.*;
+
+class User implements Serializable {
+    private String username;
+    private String password;
+
+    public User(String username, String password) {
+        this.username = username;
+        this.password = password;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+}
+
+class Expense implements Serializable {
+    private String date;
+    private String category;
+    private double amount;
+
+    public Expense(String date, String category, double amount) {
+        this.date = date;
+        this.category = category;
+        this.amount = amount;
+    }
+
+    @Override
+    public String toString() {
+        return "Date: " + date + ", Category: " + category + ", Amount: $" + amount;
+    }
+
+    public String getCategory() {
+        return category;
+    }
+
+    public double getAmount() {
+        return amount;
+    }
+}
+
+class ExpenseTracker {
+    private List<User> users;
+    private User currentUser;
+    private List<Expense> expenses;
+    private Scanner scanner;
+
+    public ExpenseTracker() {
+        users = new ArrayList<>();
+        expenses = new ArrayList<>();
+        scanner = new Scanner(System.in);
+        loadUsers();
+        loadExpenses();
+    }
+
+    public void run() {
+        System.out.println("Expense Tracker");
+
+        while (true) {
+            try {
+                System.out.println("\nMenu:");
+                System.out.println("1. User Registration");
+                System.out.println("2. Login");
+                System.out.println("3. Add Expense");
+                System.out.println("4. View Expenses");
+                System.out.println("5. View Category-wise Summation");
+                System.out.println("6. Logout");
+                System.out.println("7. Exit");
+
+                int choice = Integer.parseInt(scanner.nextLine());
+
+                switch (choice) {
+                    case 1:
+                        registerUser();
+                        break;
+                    case 2:
+                        login();
+                        break;
+                    case 3:
+                        addExpense();
+                        break;
+                    case 4:
+                        viewExpenses();
+                        break;
+                    case 5:
+                        viewCategorySummation();
+                        break;
+                    case 6:
+                        logout();
+                        break;
+                    case 7:
+                        saveData();
+                        System.out.println("Exiting Expense Tracker. Goodbye!");
+                        System.exit(0);
+                    default:
+                        System.out.println("Invalid choice. Please try again.");
+                }
+            } catch (NumberFormatException e) {
+                System.out.println("Invalid input. Please enter a number.");
+                scanner.nextLine(); // Consume the invalid input
+            } catch (Exception e) {
+                System.out.println("An error occurred: " + e.getMessage());
+            }
+        }
+    }
+
+    private void registerUser() {
+        System.out.print("Enter username: ");
+        String username = scanner.nextLine();
+        System.out.print("Enter password: ");
+        String password = scanner.nextLine();
+
+        User newUser = new User(username, password);
+        users.add(newUser);
+
+        System.out.println("User registered successfully!");
+    }
+
+    private void login() {
+        System.out.print("Enter username: ");
+        String username = scanner.nextLine();
+        System.out.print("Enter password: ");
+        String password = scanner.nextLine();
+
+        for (User user : users) {
+            if (user.getUsername().equals(username) && user.getPassword().equals(password)) {
+                currentUser = user;
+                System.out.println("Login successful!");
+                return;
+            }
+        }
+
+        System.out.println("Invalid username or password. Please try again.");
+    }
+
+    private void addExpense() {
+        if (currentUser == null) {
+            System.out.println("You need to log in first.");
+            return;
+        }
+
+        try {
+            System.out.println("Enter Expense Details:");
+            System.out.print("Date (MM/DD/YYYY): ");
+            String date = scanner.nextLine();
+            System.out.print("Category: ");
+            String category = scanner.nextLine();
+            System.out.print("Amount: $");
+            double amount = Double.parseDouble(scanner.nextLine());
+
+            Expense expense = new Expense(date, category, amount);
+            expenses.add(expense);
+
+            System.out.println("Expense added successfully!");
+        } catch (NumberFormatException e) {
+            System.out.println("Invalid amount. Please enter a valid number.");
+        }
+    }
+
+    private void viewExpenses() {
+        if (currentUser == null) {
+            System.out.println("You need to log in first.");
+            return;
+        }
+
+        if (expenses.isEmpty()) {
+            System.out.println("No expenses to display.");
+        } else {
+            System.out.println("All Expenses:");
+            for (Expense expense : expenses) {
+                System.out.println(expense);
+            }
+        }
+    }
+
+    private void viewCategorySummation() {
+        if (currentUser == null) {
+            System.out.println("You need to log in first.");
+            return;
+        }
+
+        if (expenses.isEmpty()) {
+            System.out.println("No expenses to calculate category-wise summation.");
+        } else {
+            Map<String, Double> categorySumMap = new HashMap<>();
+
+            for (Expense expense : expenses) {
+                categorySumMap.put(expense.getCategory(), categorySumMap.getOrDefault(expense.getCategory(), 0.0) + expense.getAmount());
+            }
+
+            System.out.println("Category-wise Summation:");
+            for (Map.Entry<String, Double> entry : categorySumMap.entrySet()) {
+                System.out.println(entry.getKey() + ": $" + entry.getValue());
+            }
+        }
+    }
+
+    private void logout() {
+        currentUser = null;
+        System.out.println("Logout successful!");
+    }
+
+    private void loadUsers() {
+        try (Scanner fileScanner = new Scanner(new File("users.txt"))) {
+            while (fileScanner.hasNextLine()) {
+                String[] userFields = fileScanner.nextLine().split(",");
+                users.add(new User(userFields[0], userFields[1]));
+            }
+        } catch (FileNotFoundException e) {
+            System.out.println("No previous user data found.");
+        }
+    }
+
+    private void loadExpenses() {
+        try (Scanner fileScanner = new Scanner(new File("expenses.txt"))) {
+            while (fileScanner.hasNextLine()) {
+                String[] expenseFields = fileScanner.nextLine().split(",");
+                expenses.add(new Expense(expenseFields[0], expenseFields[1], Double.parseDouble(expenseFields[2])));
+            }
+        } catch (FileNotFoundException e) {
+            System.out.println("No previous expense data found.");
+        } catch (NumberFormatException e) {
+            System.out.println("Invalid data format in expenses file.");
+        }
+    }
+
+    private void saveData() {
+        try (PrintWriter userWriter = new PrintWriter(new FileWriter("users.txt"));
+             PrintWriter expenseWriter = new PrintWriter(new FileWriter("expenses.txt"))) {
+
+            for (User user : users) {
+                userWriter.println(user.getUsername() + "," + user.getPassword());
+            }
+
+            for (Expense expense : expenses) {
+                expenseWriter.println(expense.toString());
+            }
+
+            System.out.println("Data saved successfully.");
+        } catch (IOException e) {
+            System.out.println("Error saving data: " + e.getMessage());
+        }
+    }
+}
+
+public class Main {
+    public static void main(String[] args) {
+        ExpenseTracker expenseTracker = new ExpenseTracker();
+        expenseTracker.run();
+    }
+}
